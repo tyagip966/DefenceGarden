@@ -1,9 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
-import { View, Text, ScrollView, StyleSheet, Button, Image, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View, Text, ScrollView, StyleSheet,
+  Button, Image, TextInput, TouchableOpacity,
+  Modal, KeyboardAvoidingView, Platform, ActivityIndicator
+} from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import { UserContext } from './UserContext';
 import Parse from 'parse/react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
+import RNFS from 'react-native-fs';
+
 
 const PlotDetailsPage = ({ route, navigation }) => {
   const { listing } = route.params;
@@ -16,6 +22,7 @@ const PlotDetailsPage = ({ route, navigation }) => {
   const [mobile, setMobile] = useState('');
   const { user } = useContext(UserContext);
   const [isImageViewVisible, setImageViewVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -31,6 +38,7 @@ const PlotDetailsPage = ({ route, navigation }) => {
   const imagesForViewer = [{ source: require('DefenceGarden/src/assets/plot_map.jpg') }];
 
   const handleNext = () => {
+    setIsLoading(true);
     const userData = {
       name: name,
       address: address,
@@ -38,9 +46,11 @@ const PlotDetailsPage = ({ route, navigation }) => {
       pan: pan,
     };
     setShowModal(true);
+    setIsLoading(false);
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
+    setIsLoading(true);
     var options = {
       description: 'Booking for Plot ' + listing.get('Plot_Name'),
       image: 'https://i.imgur.com/3g7nmJC.png',
@@ -52,21 +62,27 @@ const PlotDetailsPage = ({ route, navigation }) => {
         contact: mobile,
         name: name
       },
-      theme: { color: '#F37254' }
+      theme: { color: '#075E54', backgroundColor: '#E6E6E6' }
     }
 
-    RazorpayCheckout.open(options)
-      .then((data) => {
-        createCustomerInfo(data.razorpay_payment_id).then(() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'NormalUserDashboard' }],
-          });
+    try {
+      const paymentResult = await RazorpayCheckout.open(options);
+  
+      if (paymentResult && paymentResult.razorpay_payment_id) {
+        await createCustomerInfo(paymentResult.razorpay_payment_id);
+        
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'NormalUserDashboard' }],
         });
-      })
-      .catch((error) => {
-        alert(`Error: ${error.code} | ${error.description}`);
-      });
+      }
+  
+      setIsLoading(false); // Hide loader
+    } catch (error) {
+      console.error("Razorpay or other error: ", error);
+      alert(`Error: ${error.code} | ${error.description}`);
+      setIsLoading(false); // Hide loader
+    }
   };
 
   const createCustomerInfo = async (PaymentID) => {
@@ -102,18 +118,19 @@ const PlotDetailsPage = ({ route, navigation }) => {
     setShowModal(false);
   };
 
-  // const renderSliderImages = () => {
-  //   return (
-  //     <TouchableOpacity onPress={() => setImageViewVisible(true)}>
-  //       <Image source={require('DefenceGarden/src/assets/plot_map.jpg')} style={styles.sliderImage} />
-  //     </TouchableOpacity>
-  //   );
-  // };
+  const renderSliderImages = () => {
+    return (
+      <TouchableOpacity onPress={() => setImageViewVisible(true)}>
+        <Image source={require('DefenceGarden/src/assets/plot_map.jpg')} style={styles.sliderImage} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    // <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      // <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+      <View contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }} style={{ flex: 1 }}>
         <View style={styles.container}>
+          <View style={styles.sliderContainer}>{renderSliderImages()}</View>
 
           {isImageViewVisible && (
             <Modal
@@ -139,41 +156,45 @@ const PlotDetailsPage = ({ route, navigation }) => {
           )}
 
           <ScrollView style={{ width: '100%' }} >
-            <View style={styles.formContainer}>
-              <View style={styles.plotDetails}>
-                <Text style={styles.heading}>{listing.get('Plot_Name')}</Text>
-                <Text style={styles.info}>Yard: {listing.get('Yard')}</Text>
-                <Text style={styles.info}>Meter: {listing.get('Meter')}</Text>
-                <Text style={styles.info}>Dimensions: {listing.get('Dimensions')}</Text>
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+
+              <View style={styles.formContainer}>
+                <View style={styles.plotDetails}>
+                  <Text style={styles.heading}>{listing.get('Plot_Name')}</Text>
+                  <Text style={styles.info}>Yard: {listing.get('Yard')}</Text>
+                  <Text style={styles.info}>Meter: {listing.get('Meter')}</Text>
+                  <Text style={styles.info}>Dimensions: {listing.get('Dimensions')}</Text>
+                  <Text style={styles.formHeading}>User Information</Text>
+                  <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
+                  <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Address" value={address} onChangeText={setAddress} />
+                  <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Aadhaar number" value={aadhaar} onChangeText={setAadhaar} />
+                  <TextInput placeholderTextColor="grey" style={styles.input} placeholder="PAN number" value={pan} onChangeText={setPan} />
+                  <TextInput
+                    placeholderTextColor="grey"
+                    style={styles.input}
+                    placeholder="Mobile Number"
+                    keyboardType="numeric"
+                    value={mobile}
+                    maxLength={10}
+                    onChangeText={handleMobileChange}
+                  />
+                </View>
+                {/* <View style={styles.nextButtonContainer}> */}
+                <Button style={styles.nextButton} title="Next" onPress={handleNext} disabled={!name || !address || !aadhaar || !pan || mobile.length !== 10} />
+                {/* </View> */}
               </View>
-
-              <Text style={styles.formHeading}>User Information</Text>
-              <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-              <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Address" value={address} onChangeText={setAddress} />
-              <TextInput placeholderTextColor="grey" style={styles.input} placeholder="Aadhaar number" value={aadhaar} onChangeText={setAadhaar} />
-              <TextInput placeholderTextColor="grey" style={styles.input} placeholder="PAN number" value={pan} onChangeText={setPan} />
-              <TextInput
-                style={styles.input}
-                placeholder="Mobile Number"
-                keyboardType="numeric"
-                value={mobile}
-                maxLength={10}
-                onChangeText={handleMobileChange}
-              />
-            </View>
+            </KeyboardAvoidingView>
           </ScrollView>
-
-          <Button title="Next" onPress={handleNext} disabled={!name || !address || !aadhaar || !pan || mobile.length !== 10} />
-
           <Modal visible={showModal} animationType="slide" transparent>
             <View style={styles.modalContainer}>
               <View style={styles.card}>
                 <Text style={styles.modalHeading}>Enter your Booking Amount</Text>
                 <TextInput
+                  placeholderTextColor="grey"
                   style={styles.modalInput}
                   placeholder="Booking Amount"
                   keyboardType="numeric"
-                  value={bookingAmount}
+                  value={bookingAmount.toString()}
                   onChangeText={handleBookingAmountChange}
                 />
                 <View style={styles.buttonContainer}>
@@ -188,8 +209,23 @@ const PlotDetailsPage = ({ route, navigation }) => {
             </View>
           </Modal>
         </View>
-      // {/* </ScrollView> */}
-    // </KeyboardAvoidingView>
+      </View>
+      {isLoading && ( // Step 2: Conditional rendering block for loader
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999, // make sure it covers everything
+        }}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -199,6 +235,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     backgroundColor: '#E6E6E6',
+  },
+  nextButtonContainer:
+  {
+    display: 'flex',
+    alignContent: 'center',
+    backgroundColor: '#ffffff',
+    width: '20%',
+    borderWidth: 0,
+    borderColor: 'transparent'
+  },
+  nextButton: {
+    backgroundColor: "white",
+    borderWidth: 0,
+    borderColor: 'transparent'
+
   },
   sliderContainer: {
     height: '25%',
@@ -210,7 +261,9 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   formContainer: {
+    flex: 1,
     width: '98%',
+    height: '100%',
   },
   plotDetails: {
     backgroundColor: '#E6E6E6',
@@ -239,7 +292,6 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 5,
     color: 'black',
-    placeholderTextColor: 'grey',
   },
   modalContainer: {
     flex: 1,
@@ -300,16 +352,3 @@ const styles = StyleSheet.create({
 });
 
 export default PlotDetailsPage;
-
-
-/*
-
-// if (listing.images && listing.images.length > 0) {
-    //   return listing.images.map((image, index) => (
-    //     <TouchableOpacity key={index} onPress={() => setImageViewVisible(true)}>
-    //       <Image source={{ uri: image }} style={styles.sliderImage} />
-    //     </TouchableOpacity>
-    //   ));
-    // }
-
-*/

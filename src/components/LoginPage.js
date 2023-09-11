@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { enableScreens } from 'react-native-screens';
 import Parse from "parse/react-native";
 import { UserContext } from './UserContext';
@@ -11,7 +11,14 @@ const LoginPage = ({ route, navigation }) => {
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const { setUser } = useContext(UserContext);
+  const [isLoading, setIsLoading] = useState(false);
 
+  const performAction = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false); // Step 4: Set loading state to false after the action
+    }, 2000);
+  };
 
   const handleLogin = async () => {
     if (!mobileNumber || !password) {
@@ -25,14 +32,11 @@ const LoginPage = ({ route, navigation }) => {
       return;
     }
 
-    // Concatenate +91 before mobile number
-    const fullMobileNumber = '+91' + mobileNumber;
+    setIsLoading(true); // Show loading spinner
 
-    // Your login logic using fullMobileNumber and password
     try {
-
+      const fullMobileNumber = '+91' + mobileNumber;
       const loggedInUser = await Parse.User.logIn(fullMobileNumber, password);
-      // logIn returns the corresponding ParseUser object
 
       if (loggedInUser) {
         setUser(loggedInUser);
@@ -43,10 +47,10 @@ const LoginPage = ({ route, navigation }) => {
           routes: [{ name: 'NormalUserDashboard' }],
         });
       }
-
     } catch (error) {
       Alert.alert(`Error! ${error.message}`);
-      return false;
+    } finally {
+      setIsLoading(false); // Hide loading spinner
     }
   };
 
@@ -60,6 +64,7 @@ const LoginPage = ({ route, navigation }) => {
         <Text style={styles.subMessage}>Welcome to Defence Garden!</Text>
       </View>
       <TextInput
+        placeholderTextColor="grey"
         style={styles.input}
         placeholder="Mobile Number"
         value={mobileNumber}
@@ -68,6 +73,7 @@ const LoginPage = ({ route, navigation }) => {
         maxLength={10}
       />
       <TextInput
+        placeholderTextColor="grey"
         style={[styles.input, { marginBottom: 10 }]}
         placeholder="Password"
         value={password}
@@ -75,13 +81,17 @@ const LoginPage = ({ route, navigation }) => {
         secureTextEntry
       />
       <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={!mobileNumber || !password}>
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#ffffff" />
+      ) : (
         <Text style={styles.loginButtonText}>Login</Text>
+      )}
       </TouchableOpacity>
       <View style={styles.footer}>
         <Text style={styles.footerText}>Connect with us on:</Text>
         <View style={styles.socialIcons}>
-          <Icon name="facebook" size={24} color="#3b5998" onPress={() => {/* Handle your FB link here */}} />
-          <Icon name="instagram" size={24} color="#d62976" style={{ marginLeft: 20 }} onPress={() => {/* Handle your Insta link here */}} />
+          <Icon name="facebook" size={24} color="#3b5998" onPress={() => {/* Handle your FB link here */ }} />
+          <Icon name="instagram" size={24} color="#d62976" style={{ marginLeft: 20 }} onPress={() => {/* Handle your Insta link here */ }} />
         </View>
       </View>
     </View>
@@ -93,7 +103,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#E6E6E6',
     padding: 40,
   },
   input: {

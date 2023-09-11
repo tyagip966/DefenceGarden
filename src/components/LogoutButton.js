@@ -1,32 +1,37 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Alert,ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-const LogoutButton = ({ onLogout }) => {
+const LogoutButton = ({ onLogout,isLoading }) => {
 
   return (
     <TouchableOpacity style={styles.button} >
-      <Icon.Button style={{ marginRight: -10 }}
-        name="sign-out"
-        backgroundColor="#075E54"
-        size={30}
-        color="white"
-        onPress={() => {
-          Alert.alert(
-            "Confirmation",
-            "Do you really want to logout?",
-            [
-              {
-                text: "Cancel",
-                style: "cancel"
-              },
-              { text: "Yes", onPress: onLogout }
-            ],
-            { cancelable: true }
-          );
-        }}
-      >
-      </Icon.Button>
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#ffffff" />
+      ) : (
+        <Icon.Button 
+          style={{ marginRight: -10 }}
+          name="sign-out"
+          backgroundColor="#075E54"
+          size={30}
+          color="white"
+          onPress={() => {
+            Alert.alert(
+              "Confirmation",
+              "Do you really want to logout?",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel"
+                },
+                { text: "Yes", onPress: onLogout }
+              ],
+              { cancelable: true }
+            );
+          }}
+        >
+        </Icon.Button>
+      )}
     </TouchableOpacity>
   );
 };

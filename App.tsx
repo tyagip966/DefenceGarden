@@ -15,10 +15,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProvider } from './src/components/UserContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LogoutButton from './src/components/LogoutButton';  // Adjust the import path
+import { ActivityIndicator, View } from 'react-native';
 
-//Initializing the SDK. 
 Parse.setAsyncStorage(AsyncStorage);
-//You need to copy BOTH the the Application ID and the Javascript Key from: Dashboard->App Settings->Security & Keys 
 Parse.initialize('JGLijWLCwsZZP5EyBuABIVVvWwfu7wLA945AODgW', 'HKxHbQL6E4U1xgHqN910Ym0nlbQfn7w17zIbuguu');
 Parse.serverURL = 'https://parseapi.back4app.com/';
 
@@ -39,15 +38,15 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<Parse.User | null>(null);
 
+  const [isLoadingLogout, setIsLoadingLogout] = useState(false);
+
   const userProviderValue = useMemo(() => ({ user, setUser, handleLogout }), [user, setUser]);
 
-
-
   const handleLogout = (navigation: any) => {
-    // Clear Parse session and any other necessary cleanup
+    setIsLoadingLogout(true); // Show the loader
+
     Parse.User.logOut()
       .then(() => {
-        // Navigate to LoginPage
         setUser(null);
         navigation.reset({
           index: 0,
@@ -56,6 +55,9 @@ const App: React.FC = () => {
       })
       .catch(error => {
         console.error("Error logging out", error);
+      })
+      .finally(() => {
+        setIsLoadingLogout(false); // Hide the loader
       });
   };
 
@@ -76,32 +78,47 @@ const App: React.FC = () => {
                 name="NormalUserDashboard"
                 component={NormalUserDashboard}
                 options={({ navigation }) => ({
-                  headerRight: () => <LogoutButton onLogout={() => handleLogout(navigation)} />
+                  headerRight: () => <LogoutButton isLoading={isLoadingLogout} onLogout={() => handleLogout(navigation)} />
                 })}
               />
               <Stack.Screen
                 name="PlotDetailsPage"
                 component={PlotDetailsPage}
                 options={({ navigation }) => ({
-                  headerRight: () => <LogoutButton onLogout={() => handleLogout(navigation)} />
+                  headerRight: () => <LogoutButton isLoading={isLoadingLogout} onLogout={() => handleLogout(navigation)} />
                 })}
               />
               <Stack.Screen
                 name="AdminDashboard"
                 component={AdminDashboard}
                 options={({ navigation }) => ({
-                  headerRight: () => <LogoutButton onLogout={() => handleLogout(navigation)} />
+                  headerRight: () => <LogoutButton isLoading={isLoadingLogout} onLogout={() => handleLogout(navigation)} />
                 })}
               />
               <Stack.Screen
                 name="UserDetailsPage"
                 component={UserDetailsPage}
                 options={({ navigation }) => ({
-                  headerRight: () => <LogoutButton onLogout={() => handleLogout(navigation)} />
+                  headerRight: () => <LogoutButton isLoading={isLoadingLogout} onLogout={() => handleLogout(navigation)} />
                 })}
               />
             </Stack.Navigator>
           </NavigationContainer>
+          {isLoadingLogout && (
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 9999, // make sure it covers everything
+            }}>
+              <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+          )}
         </UserProvider>
       </SafeAreaProvider>
 
@@ -110,36 +127,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-// const App = () => {
-//   return (
-//     <SafeAreaProvider>
-//       <UserProvider>
-//         <NavigationContainer>
-//           <Drawer.Navigator
-//             drawerContent={SideBar}
-//             initialRouteName="Login"
-//           >
-//             <Drawer.Screen
-//               name="Login"
-//               component={LoginPage}
-//               options={{
-//                 headerShown: false,
-//                 swipeEnabled: false,
-//               }}
-//             />
-//             <Drawer.Screen
-//               name="NormalUserDashboard"
-//               component={NormalUserDashboard}
-//             />
-//             <Drawer.Screen name="PlotDetailsPage" component={PlotDetailsPage} />
-//             <Drawer.Screen name="AdminDashboard" component={AdminDashboard} />
-//             <Drawer.Screen name="UserDetailsPage" component={UserDetailsPage} />
-//           </Drawer.Navigator>
-//         </NavigationContainer>
-//       </UserProvider>
-//     </SafeAreaProvider>
-//   );
-// };
-
-// export default App;
