@@ -8,8 +8,6 @@ import RazorpayCheckout from 'react-native-razorpay';
 import { UserContext } from './UserContext';
 import Parse from 'parse/react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
-import RNFS from 'react-native-fs';
-
 
 const PlotDetailsPage = ({ route, navigation }) => {
   const { listing } = route.params;

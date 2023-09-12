@@ -23,7 +23,7 @@
     "react": "18.2.0",
     "react-native": "0.72.2",
     "react-native-elements": "^3.4.3",
-    "react-native-fs": "^2.20.0",
+    "react-native-fabric": "^0.5.2",
     "react-native-gesture-handler": "^2.12.0",
     "react-native-get-random-values": "^1.9.0",
     "react-native-image-zoom-viewer": "^3.0.1",
